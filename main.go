@@ -6,47 +6,24 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/spf13/viper"
 )
 
 func main() {
 	if err := loadConfig(); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
-	prevIp, err := os.ReadFile("./last-ip.txt")
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		panic(err)
-	}
-
-	resp, err := http.Get("https://api.ipify.org")
-	if err != nil {
-		panic(err)
-	}
-
-	defer resp.Body.Close()
-	ip, err := io.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-
-	ipString := strings.TrimSpace(string(ip))
-
-	if len(ipString) < 1 {
-		panic("ip is empty, something went wrong")
-	}
-
-	if ipString != strings.TrimSpace(string(prevIp)) {
-		fmt.Printf("%v != %v\n", ipString, strings.TrimSpace(string(prevIp)))
-		if err := updateIp(ipString); err != nil {
-			panic(err)
-		}
-	} else {
-		fmt.Println("no update was required")
+	if err := startTicker(); err != nil {
+		log.Fatal(err)
 	}
 
 }
@@ -68,7 +45,7 @@ func loadConfig() error {
 				fmt.Println("entering here")
 				return writeErr
 			}
-			return fmt.Errorf("no config found, creating config with default values")
+			return fmt.Errorf("no config found, creating config with default values, update config before executing again")
 
 		} else {
 			return err
@@ -108,7 +85,7 @@ func updateIp(newIp string) error {
 		Ttl:     viper.GetInt("ttl"),
 		Type:    viper.GetString("Type"),
 		Ipv4:    newIp,
-		Proxied: true,
+		Proxied: false,
 	}
 
 	url := fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%v/dns_records/%v", viper.GetString("zone-id"), viper.GetString("dns-record-id"))
@@ -160,4 +137,62 @@ func writeIpToFile(ip string) error {
 		return err
 	}
 	return nil
+}
+
+func startTicker() error {
+
+	ticker := time.NewTicker(time.Minute * 30)
+	defer ticker.Stop()
+
+	signalChan := make(chan os.Signal, 1)
+
+	signal.Notify(signalChan, syscall.SIGTERM, syscall.SIGINT)
+
+	for {
+		select {
+		case <-signalChan:
+			fmt.Println("terminating execution")
+			return nil
+		case <-ticker.C:
+			if err := checkIpUpdate(); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func checkIpUpdate() error {
+
+	prevIp, err := os.ReadFile("./last-ip.txt")
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+
+	resp, err := http.Get("https://api.ipify.org")
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+	ip, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	ipString := strings.TrimSpace(string(ip))
+
+	if len(ipString) < 1 {
+		return fmt.Errorf("ip is empty, something went wrong")
+	}
+
+	if ipString != strings.TrimSpace(string(prevIp)) {
+		fmt.Printf("%v != %v\n", ipString, strings.TrimSpace(string(prevIp)))
+		if err := updateIp(ipString); err != nil {
+			return err
+		}
+	} else {
+		fmt.Println("no update was required")
+	}
+	return nil
+
 }
