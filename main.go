@@ -129,6 +129,8 @@ func updateIp(newIp string) error {
 		return fmt.Errorf("no success on request. %v", cdnsr.Result)
 	}
 
+	fmt.Printf("successfully updated dns record: %v\n", cdnsr.Result)
+
 	return writeIpToFile(newIp)
 }
 
@@ -145,18 +147,27 @@ func startTicker() error {
 	defer ticker.Stop()
 
 	signalChan := make(chan os.Signal, 1)
+	onceChan := make(chan struct{}, 1)
+	onceChan <- struct{}{}
 
 	signal.Notify(signalChan, syscall.SIGTERM, syscall.SIGINT)
 
 	for {
 		select {
+
 		case <-signalChan:
 			fmt.Println("terminating execution")
 			return nil
+		case <-onceChan:
+			if err := checkIpUpdate(); err != nil {
+				return err
+			}
+
 		case <-ticker.C:
 			if err := checkIpUpdate(); err != nil {
 				return err
 			}
+
 		}
 	}
 }
