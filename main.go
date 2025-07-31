@@ -42,8 +42,9 @@ func main() {
 
 	if ipString != strings.TrimSpace(string(prevIp)) {
 		fmt.Printf("%v != %v\n", ipString, strings.TrimSpace(string(prevIp)))
-		updateIp(ipString)
-		writeIpToFile(ipString)
+		if err := updateIp(ipString); err != nil {
+			panic(err)
+		}
 	} else {
 		fmt.Println("no update was required")
 	}
@@ -62,7 +63,6 @@ func loadConfig() error {
 			viper.SetDefault("domain-name", "")
 			viper.SetDefault("ttl", 1)
 			viper.SetDefault("type", "A")
-			viper.SetDefault("ipv4", "")
 
 			if writeErr := viper.WriteConfigAs("./config.toml"); writeErr != nil {
 				fmt.Println("entering here")
@@ -89,10 +89,11 @@ func loadConfig() error {
 }
 
 type ARecordInfo struct {
-	Domain string `json:"name"`
-	Ttl    int    `json:"ttl"`
-	Type   string `json:"type"`
-	Ipv4   string `json:"content"`
+	Domain  string `json:"name"`
+	Ttl     int    `json:"ttl"`
+	Type    string `json:"type"`
+	Ipv4    string `json:"content"`
+	Proxied bool   `json:"proxied"`
 }
 
 type CloudflareDnsResponse struct {
@@ -103,10 +104,11 @@ type CloudflareDnsResponse struct {
 func updateIp(newIp string) error {
 
 	recordInfo := ARecordInfo{
-		Domain: viper.GetString("domain-name"),
-		Ttl:    viper.GetInt("ttl"),
-		Type:   viper.GetString("Type"),
-		Ipv4:   newIp,
+		Domain:  viper.GetString("domain-name"),
+		Ttl:     viper.GetInt("ttl"),
+		Type:    viper.GetString("Type"),
+		Ipv4:    newIp,
+		Proxied: true,
 	}
 
 	url := fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%v/dns_records/%v", viper.GetString("zone-id"), viper.GetString("dns-record-id"))
@@ -122,8 +124,8 @@ func updateIp(newIp string) error {
 	}
 
 	req.Header.Add("content-type", "application/json")
-	req.Header.Add("X-Auth-Email", viper.GetString("cloudflare-email"))
-	req.Header.Add("X-Auth-Key", viper.GetString("cloudflare-api-key"))
+	// req.Header.Add("X-Auth-Email", viper.GetString("cloudflare-email"))
+	req.Header.Add("authorization", fmt.Sprintf("Bearer %v", viper.GetString("cloudflare-api-key")))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
