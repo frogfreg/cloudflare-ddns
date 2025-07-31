@@ -126,7 +126,7 @@ func updateIp(newIp string) error {
 	}
 
 	if !cdnsr.Success {
-		return fmt.Errorf("no success on request. %v", cdnsr.Result)
+		return fmt.Errorf("no success on request. %+v", cdnsr.Result)
 	}
 
 	fmt.Printf("successfully updated dns record: %v\n", cdnsr.Result)
