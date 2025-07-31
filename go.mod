@@ -1,4 +1,4 @@
-module go-cloudflare-ddns
+module github.com/frogfreg/cloudflare-ddns
 
 go 1.24.5
 
