@@ -41,9 +41,11 @@ func main() {
 	}
 
 	if ipString != strings.TrimSpace(string(prevIp)) {
-		fmt.Println("IPs are different")
-		panic("stopping before calling cloudflare")
+		fmt.Printf("%v != %v\n", ipString, strings.TrimSpace(string(prevIp)))
 		updateIp(ipString)
+		writeIpToFile(ipString)
+	} else {
+		fmt.Println("no update was required")
 	}
 
 }
@@ -73,7 +75,14 @@ func loadConfig() error {
 		}
 	}
 
-	//todo: validate valid values in config
+	for _, k := range viper.AllKeys() {
+		if k == "ttl" {
+			continue
+		}
+		if strings.TrimSpace(viper.GetString(k)) == "" {
+			return fmt.Errorf("value for key %q is empty", k)
+		}
+	}
 
 	return nil
 
