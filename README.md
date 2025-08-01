@@ -4,9 +4,72 @@ A tiny Go application that updates Cloudflare DNS records with your current publ
 
 It should work right now, but this is still a work in progress
 
-## TODO:
-- Add releases
-- Make this more easily configurable and simple to use
+## Installation
+
+### Option 1: Install via Go (Recommended)
+
+This is the easiest way to install the application. The binary will be automatically downloaded and installed to your Go bin directory.
+
+**Prerequisites:**
+- Go 1.24.5 or higher installed and in your PATH
+
+**Installation:**
+```bash
+go install github.com/frogfreg/cloudflare-ddns@latest
+```
+
+**Running the application:**
+```bash
+# The binary will be available in your Go bin directory
+cloudflare-ddns
+```
+
+**Note:** Make sure your Go bin directory is in your PATH. On Unix systems, this is usually `~/go/bin`. On Windows, it's typically `%GOPATH%\bin` or `%USERPROFILE%\go\bin`.
+
+### Option 2: Build from Source
+
+Build the application from source code for your specific platform.
+
+**Prerequisites:**
+- Go 1.24.5 or higher
+- Git (to clone the repository)
+
+**Build steps:**
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/frogfreg/cloudflare-ddns.git
+   cd cloudflare-ddns
+   ```
+
+2. **Build the application:**
+   ```bash
+   go build -o cloudflare-ddns main.go
+   ```
+
+3. **Run the application:**
+   ```bash
+   ./cloudflare-ddns
+   ```
+
+**Alternative build options:**
+
+- **Build with optimizations** (smaller binary size):
+  ```bash
+  go build -ldflags="-s -w" -o cloudflare-ddns main.go
+  ```
+
+- **Build for a different platform** (cross-compilation):
+  ```bash
+  # For Linux
+  GOOS=linux GOARCH=amd64 go build -o cloudflare-ddns-linux main.go
+  
+  # For Windows
+  GOOS=windows GOARCH=amd64 go build -o cloudflare-ddns.exe main.go
+  
+  # For macOS
+  GOOS=darwin GOARCH=amd64 go build -o cloudflare-ddns-darwin main.go
+  ```
 
 ## Configuration
 
@@ -71,3 +134,6 @@ The application will:
 - Built with [Viper](https://github.com/spf13/viper) for configuration management
 - Integrates with [Cloudflare API](https://developers.cloudflare.com/api/)
 
+## TODO:
+
+- Make this more easily configurable and simple to use
